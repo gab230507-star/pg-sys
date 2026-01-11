@@ -386,6 +386,7 @@ export function MeetingsScheduler({ currentUserId }: { currentUserId: number }) 
                         <SelectContent>
                           <SelectItem value="Pendente">Pendente</SelectItem>
                           <SelectItem value="Compra">Compra</SelectItem>
+                          <SelectItem value="Realizado">Realizado</SelectItem>
                           <SelectItem value="Talvez">Talvez</SelectItem>
                           <SelectItem value="Não compra">Não compra</SelectItem>
                         </SelectContent>
