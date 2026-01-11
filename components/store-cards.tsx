@@ -36,7 +36,7 @@ interface StoreData {
   plan: string
   progress: number
   status: "em_andamento" | "concluido" | "pendente"
-  created_at: string
+  created_at: string | Date
   customer_name?: string
   drive_link?: string
   created_by_name?: string
