@@ -49,6 +49,7 @@ const accountsBrasil = [
   { id: "hostinger", name: "Hostinger" },
   { id: "appmax", name: "Appmax" },
   { id: "hypersku", name: "HyperSKU" },
+  { id: "dsers", name: "DSers" },
 ]
 
 const accountsGlobal = [
@@ -56,6 +57,7 @@ const accountsGlobal = [
   { id: "hypersku", name: "HyperSKU" },
   { id: "shopify", name: "Shopify" },
   { id: "gmail", name: "Gmail" },
+  { id: "dsers", name: "DSers" },
 ]
 
 interface FormData {

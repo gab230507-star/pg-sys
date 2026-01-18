@@ -27,6 +27,7 @@ import {
 } from "@/components/ui/dropdown-menu"
 import { deleteStore, updateStoreProgress, getStoreDetails, updateStore } from "@/app/actions/store-actions"
 import { cn } from "@/lib/utils"
+import { formatDateBR as formatDateBRUtil, calculateDeliveryDate, getBusinessDaysByPlan } from "@/lib/date"
 
 interface StoreData {
   id: number
@@ -400,13 +401,27 @@ export function StoreCards({ initialStores }: { initialStores: StoreData[] }) {
                     <MapPin className="h-4 w-4" />
                     <span className="capitalize">{store.region}</span>
                   </div>
-                  <div className="flex items-center gap-1">
-                    <Calendar className="h-4 w-4" />
-                    <span>{formatDateBR(
-  typeof store.created_at === "string"
-    ? store.created_at.split("T")[0]
-    : new Date(store.created_at).toISOString().split("T")[0]
-)}</span>
+                </div>
+
+                {/* Datas e Prazo */}
+                <div className="space-y-1 text-xs">
+                  <div className="flex items-center justify-between">
+                    <span className="text-muted-foreground">Cadastrado em:</span>
+                    <span className="text-foreground font-medium">
+                      {formatDateBRUtil(store.created_at)}
+                    </span>
+                  </div>
+                  <div className="flex items-center justify-between">
+                    <span className="text-muted-foreground">Entregar até:</span>
+                    <span className="text-foreground font-medium">
+                      {formatDateBRUtil(calculateDeliveryDate(store.created_at, store.plan))}
+                    </span>
+                  </div>
+                  <div className="flex items-center justify-between">
+                    <span className="text-muted-foreground">Prazo:</span>
+                    <span className="text-primary font-medium">
+                      {getBusinessDaysByPlan(store.plan)} dias úteis
+                    </span>
                   </div>
                 </div>
 

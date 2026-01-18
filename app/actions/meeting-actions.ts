@@ -25,6 +25,7 @@ export async function getMeetingsByDate(date: string) {
     const meetings = await sql`
       SELECT 
         m.*,
+        m.observations,
         ua.name as attendant_name,
         up.name as performer_name
       FROM meetings m
@@ -48,6 +49,7 @@ export async function createMeeting(data: {
   attendant_user_id: number
   performer_user_id: number
   reason: string
+  observations?: string
 }) {
   const { error, user } = await validateMeetingAccess()
   if (error || !user) {
@@ -56,16 +58,14 @@ export async function createMeeting(data: {
 
   try {
     await sql`
-      INSERT INTO meetings (meeting_date, meeting_time, lead_name, lead_phone, attendant_user_id, performer_user_id, reason)
-      VALUES (${data.meeting_date}, ${data.meeting_time}, ${data.lead_name}, ${data.lead_phone}, ${data.attendant_user_id}, ${data.performer_user_id}, ${data.reason})
+      INSERT INTO meetings (meeting_date, meeting_time, lead_name, lead_phone, attendant_user_id, performer_user_id, reason, observations)
+      VALUES (${data.meeting_date}, ${data.meeting_time}, ${data.lead_name}, ${data.lead_phone}, ${data.attendant_user_id}, ${data.performer_user_id}, ${data.reason}, ${data.observations || null})
     `
     revalidatePath("/reunioes")
     return { success: true }
   } catch (error: unknown) {
     console.error("Create meeting error:", error)
-    if (error && typeof error === "object" && "code" in error && error.code === "23505") {
-      return { success: false, error: "Já existe uma reunião agendada neste horário" }
-    }
+    // Não bloquear mais por unique constraint (23505), agora permite múltiplas reuniões no mesmo horário
     return { success: false, error: "Erro ao criar reunião" }
   }
 }
@@ -79,6 +79,7 @@ export async function updateMeeting(
     performer_user_id?: number
     reason?: string
     status?: string
+    observations?: string
   },
 ) {
   const { error, user } = await validateMeetingAccess()
@@ -87,39 +88,6 @@ export async function updateMeeting(
   }
 
   try {
-    const updates: string[] = []
-    const values: (string | number)[] = []
-    let paramIndex = 1
-
-    if (data.lead_name !== undefined) {
-      updates.push(`lead_name = $${paramIndex++}`)
-      values.push(data.lead_name)
-    }
-    if (data.lead_phone !== undefined) {
-      updates.push(`lead_phone = $${paramIndex++}`)
-      values.push(data.lead_phone)
-    }
-    if (data.attendant_user_id !== undefined) {
-      updates.push(`attendant_user_id = $${paramIndex++}`)
-      values.push(data.attendant_user_id)
-    }
-    if (data.performer_user_id !== undefined) {
-      updates.push(`performer_user_id = $${paramIndex++}`)
-      values.push(data.performer_user_id)
-    }
-    if (data.reason !== undefined) {
-      updates.push(`reason = $${paramIndex++}`)
-      values.push(data.reason)
-    }
-    if (data.status !== undefined) {
-      updates.push(`status = $${paramIndex++}`)
-      values.push(data.status)
-    }
-
-    if (updates.length === 0) {
-      return { success: false, error: "Nenhum campo para atualizar" }
-    }
-
     await sql`
       UPDATE meetings 
       SET lead_name = COALESCE(${data.lead_name}, lead_name),
@@ -127,7 +95,8 @@ export async function updateMeeting(
           attendant_user_id = COALESCE(${data.attendant_user_id}, attendant_user_id),
           performer_user_id = COALESCE(${data.performer_user_id}, performer_user_id),
           reason = COALESCE(${data.reason}, reason),
-          status = COALESCE(${data.status}, status)
+          status = COALESCE(${data.status}, status),
+          observations = COALESCE(${data.observations}, observations)
       WHERE id = ${id}::uuid
     `
     revalidatePath("/reunioes")

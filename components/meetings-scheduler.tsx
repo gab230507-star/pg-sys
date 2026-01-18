@@ -1,5 +1,7 @@
 "use client"
 
+import React from "react"
+
 import { useState, useEffect, useTransition } from "react"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
@@ -15,7 +17,8 @@ import {
   DialogTitle,
 } from "@/components/ui/dialog"
 import { Badge } from "@/components/ui/badge"
-import { Calendar, Clock, Phone, User, Trash2, Edit, Plus, ChevronLeft, ChevronRight, Loader2 } from "lucide-react"
+import { Textarea } from "@/components/ui/textarea"
+import { Calendar, Clock, Phone, User, Trash2, Edit, Plus, ChevronLeft, ChevronRight, Loader2, Eye, FileText } from "lucide-react"
 import { cn } from "@/lib/utils"
 import {
   getMeetingsByDate,
@@ -59,6 +62,7 @@ interface Meeting {
   performer_name: string
   reason: string
   status: string
+  observations?: string
 }
 
 interface ComercialUser {
@@ -103,7 +107,11 @@ export function MeetingsScheduler({ currentUserId }: { currentUserId: number }) 
     attendant_user_id: "",
     performer_user_id: "",
     reason: "",
+    observations: "",
   })
+
+  const [detailsDialogOpen, setDetailsDialogOpen] = useState(false)
+  const [detailsSlotTime, setDetailsSlotTime] = useState<string | null>(null)
 
   useEffect(() => {
     loadMeetings()
@@ -135,10 +143,24 @@ export function MeetingsScheduler({ currentUserId }: { currentUserId: number }) 
       attendant_user_id: String(currentUserId),
       performer_user_id: "",
       reason: "",
+      observations: "",
     })
     setSelectedSlot(time)
     setIsDialogOpen(true)
     setError(null)
+  }
+
+  // Abre o dialog de detalhes para um horário específico
+  const handleOpenDetails = (time: string, e: React.MouseEvent) => {
+    e.stopPropagation()
+    setDetailsSlotTime(time)
+    setDetailsDialogOpen(true)
+  }
+
+  // Abre detalhes de uma reunião específica (da lista do dia)
+  const handleOpenMeetingDetails = (meeting: Meeting) => {
+    setDetailsSlotTime(meeting.meeting_time.slice(0, 5))
+    setDetailsDialogOpen(true)
   }
 
   // ✅ Edição agora é por reunião (pela lista do dia)
@@ -151,9 +173,11 @@ export function MeetingsScheduler({ currentUserId }: { currentUserId: number }) 
       attendant_user_id: String(meeting.attendant_user_id),
       performer_user_id: String(meeting.performer_user_id),
       reason: meeting.reason,
+      observations: meeting.observations || "",
     })
     setSelectedSlot(meeting.meeting_time.slice(0, 5))
     setIsDialogOpen(true)
+    setDetailsDialogOpen(false)
     setError(null)
   }
 
@@ -180,6 +204,7 @@ export function MeetingsScheduler({ currentUserId }: { currentUserId: number }) 
           attendant_user_id: Number(formData.attendant_user_id),
           performer_user_id: Number(formData.performer_user_id),
           reason: formData.reason,
+          observations: formData.observations || undefined,
         })
         if (!result.success) {
           setError(result.error || "Erro ao atualizar reunião")
@@ -194,6 +219,7 @@ export function MeetingsScheduler({ currentUserId }: { currentUserId: number }) 
           attendant_user_id: Number(formData.attendant_user_id),
           performer_user_id: Number(formData.performer_user_id),
           reason: formData.reason,
+          observations: formData.observations || undefined,
         })
         if (!result.success) {
           setError(result.error || "Erro ao criar reunião")
@@ -254,7 +280,7 @@ export function MeetingsScheduler({ currentUserId }: { currentUserId: number }) 
         return "bg-green-500/20 text-green-400 border border-green-500/30"
 
       case "Realizado":
-        return "bg-green-500/10 text-green-400 border border-green-500/30"
+        return "bg-cyan-500/20 text-cyan-400 border border-cyan-500/30"
 
       case "Talvez":
         return "bg-yellow-500/20 text-yellow-400 border border-yellow-500/30"
@@ -313,43 +339,65 @@ export function MeetingsScheduler({ currentUserId }: { currentUserId: number }) 
               const firstMeeting = meetingsAtTime[0]
 
               return (
-                <Button
+                <div
                   key={time}
-                  variant={isBooked ? "secondary" : "outline"}
                   className={cn(
-                    "h-auto py-3 flex flex-col items-start gap-1 relative",
-                    isBooked && "border-primary/50 bg-primary/5",
+                    "h-auto py-3 flex flex-col items-start gap-1 relative rounded-md border cursor-pointer transition-colors",
+                    isBooked
+                      ? "border-primary/50 bg-primary/5 hover:bg-primary/10"
+                      : "border-input bg-background hover:bg-accent hover:text-accent-foreground",
                   )}
                   // ✅ clicar no slot abre CRIAÇÃO (não edição)
                   onClick={() => handleCreateAtSlot(time)}
                 >
-                  <span
-                    className={cn(
-                      "text-sm font-bold px-2 py-0.5 rounded-full",
-                      isBooked ? "bg-primary/20 text-primary" : "text-foreground",
-                    )}
-                  >
-                    {time}
-                  </span>
-
-                  {isBooked ? (
-                    <>
-                      <span className="text-xs text-muted-foreground truncate w-full text-left">
-                        {firstMeeting.lead_name}
-                        {meetingsAtTime.length > 1 ? ` (+${meetingsAtTime.length - 1})` : ""}
-                      </span>
-                      <Badge className={cn("text-xs", getReasonColor(firstMeeting.reason))}>{firstMeeting.reason}</Badge>
-                      <Badge className={cn("text-xs", getStatusColor(firstMeeting.status))}>{firstMeeting.status}</Badge>
-                      <span className="text-[10px] text-muted-foreground mt-1 flex items-center gap-1">
-                        <Plus className="h-3 w-3" /> Adicionar mais
-                      </span>
-                    </>
-                  ) : (
-                    <span className="text-xs text-muted-foreground flex items-center gap-1">
-                      <Plus className="h-3 w-3" /> Disponível
+                  <div className="w-full px-3">
+                    <span
+                      className={cn(
+                        "text-sm font-bold px-2 py-0.5 rounded-full",
+                        isBooked ? "bg-primary/20 text-primary" : "text-foreground",
+                      )}
+                    >
+                      {time}
                     </span>
-                  )}
-                </Button>
+                  </div>
+
+                  <div className="w-full px-3">
+                    {isBooked ? (
+                      <>
+                        <span className="text-xs text-muted-foreground truncate block w-full text-left">
+                          {firstMeeting.lead_name}
+                          {meetingsAtTime.length > 1 ? ` (+${meetingsAtTime.length - 1})` : ""}
+                        </span>
+                        <div className="flex flex-wrap gap-1 mt-1">
+                          <Badge className={cn("text-xs", getReasonColor(firstMeeting.reason))}>
+                            {firstMeeting.reason}
+                          </Badge>
+                          <Badge className={cn("text-xs", getStatusColor(firstMeeting.status))}>
+                            {firstMeeting.status}
+                          </Badge>
+                        </div>
+                        <div className="flex items-center justify-between mt-2 w-full">
+                          <span className="text-[10px] text-muted-foreground flex items-center gap-1">
+                            <Plus className="h-3 w-3" /> Adicionar
+                          </span>
+                          <Button
+                            variant="ghost"
+                            size="sm"
+                            className="h-6 px-2 text-xs bg-secondary/80 hover:bg-secondary"
+                            onClick={(e) => handleOpenDetails(time, e)}
+                          >
+                            <Eye className="h-3 w-3 mr-1" />
+                            Detalhes
+                          </Button>
+                        </div>
+                      </>
+                    ) : (
+                      <span className="text-xs text-muted-foreground flex items-center gap-1">
+                        <Plus className="h-3 w-3" /> Disponível
+                      </span>
+                    )}
+                  </div>
+                </div>
               )
             })}
           </div>
@@ -412,7 +460,15 @@ export function MeetingsScheduler({ currentUserId }: { currentUserId: number }) 
                         </SelectContent>
                       </Select>
                     </div>
-                    <Button variant="ghost" size="icon" onClick={() => handleEditMeeting(meeting)}>
+                    <Button
+                      variant="ghost"
+                      size="icon"
+                      onClick={() => handleOpenMeetingDetails(meeting)}
+                      title="Ver detalhes"
+                    >
+                      <FileText className="h-4 w-4" />
+                    </Button>
+                    <Button variant="ghost" size="icon" onClick={() => handleEditMeeting(meeting)} title="Editar">
                       <Edit className="h-4 w-4" />
                     </Button>
                   </div>
@@ -547,6 +603,19 @@ export function MeetingsScheduler({ currentUserId }: { currentUserId: number }) 
                 </SelectContent>
               </Select>
             </div>
+
+            <div className="space-y-2">
+              <Label htmlFor="observations" className="text-foreground">
+                Observações
+              </Label>
+              <Textarea
+                id="observations"
+                value={formData.observations}
+                onChange={(e) => setFormData({ ...formData, observations: e.target.value })}
+                placeholder="Observações adicionais sobre a reunião..."
+                className="bg-secondary border-input text-foreground min-h-[80px]"
+              />
+            </div>
           </div>
 
           <DialogFooter className="flex-col sm:flex-row gap-2">
@@ -563,6 +632,89 @@ export function MeetingsScheduler({ currentUserId }: { currentUserId: number }) 
             >
               {isPending && <Loader2 className="h-4 w-4 animate-spin mr-2" />}
               {editingMeeting ? "Salvar Alterações" : "Criar Reunião"}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* Dialog de Detalhes das Reuniões */}
+      <Dialog open={detailsDialogOpen} onOpenChange={setDetailsDialogOpen}>
+        <DialogContent className="bg-card border-border max-w-2xl max-h-[80vh] overflow-y-auto">
+          <DialogHeader>
+            <DialogTitle className="text-foreground flex items-center gap-2">
+              <Clock className="h-5 w-5 text-primary" />
+              Reuniões às {detailsSlotTime}
+            </DialogTitle>
+            <DialogDescription>{formatDateBR(selectedDate)}</DialogDescription>
+          </DialogHeader>
+
+          <div className="space-y-4">
+            {meetings
+              .filter((m) => m.meeting_time === detailsSlotTime + ":00")
+              .map((meeting) => (
+                <div key={meeting.id} className="p-4 rounded-lg bg-secondary/50 border border-border space-y-3">
+                  <div className="flex items-center justify-between">
+                    <div className="flex items-center gap-2">
+                      <span className="font-semibold text-foreground">{meeting.lead_name}</span>
+                      <Badge variant="outline" className={getReasonColor(meeting.reason)}>
+                        {meeting.reason}
+                      </Badge>
+                      <Badge variant="outline" className={getStatusColor(meeting.status)}>
+                        {meeting.status}
+                      </Badge>
+                    </div>
+                    <Button variant="outline" size="sm" onClick={() => handleEditMeeting(meeting)}>
+                      <Edit className="h-3 w-3 mr-1" />
+                      Editar
+                    </Button>
+                  </div>
+
+                  <div className="grid grid-cols-2 gap-3 text-sm">
+                    <div>
+                      <span className="text-muted-foreground">Telefone:</span>
+                      <p className="text-foreground font-medium">{formatPhoneNumber(meeting.lead_phone)}</p>
+                    </div>
+                    <div>
+                      <span className="text-muted-foreground">Atendente:</span>
+                      <p className="text-foreground font-medium">{meeting.attendant_name}</p>
+                    </div>
+                    <div>
+                      <span className="text-muted-foreground">Realizador:</span>
+                      <p className="text-foreground font-medium">{meeting.performer_name}</p>
+                    </div>
+                    <div>
+                      <span className="text-muted-foreground">Motivo:</span>
+                      <p className="text-foreground font-medium">{meeting.reason}</p>
+                    </div>
+                  </div>
+
+                  {meeting.observations && (
+                    <div className="pt-2 border-t border-border">
+                      <span className="text-muted-foreground text-sm">Observações:</span>
+                      <p className="text-foreground text-sm mt-1 whitespace-pre-wrap">{meeting.observations}</p>
+                    </div>
+                  )}
+                </div>
+              ))}
+
+            {meetings.filter((m) => m.meeting_time === detailsSlotTime + ":00").length === 0 && (
+              <p className="text-muted-foreground text-center py-4">Nenhuma reunião neste horário</p>
+            )}
+          </div>
+
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setDetailsDialogOpen(false)} className="bg-transparent">
+              Fechar
+            </Button>
+            <Button
+              onClick={() => {
+                setDetailsDialogOpen(false)
+                if (detailsSlotTime) handleCreateAtSlot(detailsSlotTime)
+              }}
+              className="bg-primary hover:bg-primary/90"
+            >
+              <Plus className="h-4 w-4 mr-2" />
+              Adicionar Reunião
             </Button>
           </DialogFooter>
         </DialogContent>
