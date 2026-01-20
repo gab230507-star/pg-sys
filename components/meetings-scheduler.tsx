@@ -282,6 +282,9 @@ export function MeetingsScheduler({ currentUserId }: { currentUserId: number }) 
       case "Realizado":
         return "bg-cyan-500/20 text-cyan-400 border border-cyan-500/30"
 
+      case "Reagendar":
+        return "bg-purple-500/20 text-purple-400 border border-purple-500/30"
+
       case "Talvez":
         return "bg-yellow-500/20 text-yellow-400 border border-yellow-500/30"
 
@@ -455,6 +458,7 @@ export function MeetingsScheduler({ currentUserId }: { currentUserId: number }) 
                           <SelectItem value="Pendente">Pendente</SelectItem>
                           <SelectItem value="Compra">Compra</SelectItem>
                           <SelectItem value="Realizado">Realizado</SelectItem>
+                          <SelectItem value="Reagendar">Reagendar</SelectItem>
                           <SelectItem value="Talvez">Talvez</SelectItem>
                           <SelectItem value="Não compra">Não compra</SelectItem>
                         </SelectContent>
