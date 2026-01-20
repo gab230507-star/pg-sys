@@ -29,6 +29,12 @@ import {
 } from "@/app/actions/meeting-actions"
 
 const TIME_SLOTS = [
+  "07:00",
+  "07:30",
+  "08:00",
+  "08:30",
+  "09:00",
+  "09:30",
   "10:00",
   "10:30",
   "11:00",
